@@ -19,6 +19,8 @@ describe('effect', () => {
 
     expect(effectAge).toBe(12);
   });
+  // 先执行effect内的fn，当响应式第一次触发时执行一次scheduler函数，随后返回fn函数
+  // 后续可以任意调用fn函数刷新页面
   it('scheduler', () => {
     let dummy;
     let run: any
