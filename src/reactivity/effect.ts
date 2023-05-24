@@ -1,21 +1,24 @@
+import type { options } from './types/index';
 // 接受一个fn，存为私有变量中，将当前fn的作用域存起来，暴露出一个run方法来执行该fn，后续trigger触发时会执行这个fn
 class ReactiveEffect {
   private _fn: any;
 
-  constructor (fn: any) {
+  constructor (fn: any, public scheduler?: () => void) {
     this._fn = fn
   }
 
   run () {
     activeEffect = this
-    this._fn()
+    return this._fn()
   }
 }
 
 // 将当前fn实例化并执行一次
-export function effect(fn: any) {
-  let _effect = new ReactiveEffect(fn)
+export function effect(fn: any, options: options = {}) {
+  let _effect = new ReactiveEffect(fn, options.scheduler)
   _effect.run()
+  const runner = _effect.run.bind(_effect)
+  return runner
 };
 
 // 定义一个当前作用域变量，后续当trigger触发时可以去作用域中拿到run方法
@@ -54,6 +57,11 @@ export function trigger(target: any, key: any) {
   const keyMap = targetMap.get(target)
   const effects = keyMap.get(key)
   for (const effect of effects) {
-    effect.run()
+    // 判断是否有scheduler，如果有则执行，否则则执行run
+    if (effect.scheduler) {
+      effect.scheduler()
+    } else {
+      effect.run()
+    }
   }
 };
