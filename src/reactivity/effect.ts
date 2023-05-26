@@ -2,22 +2,51 @@ import type { options } from './types/index';
 // 接受一个fn，存为私有变量中，将当前fn的作用域存起来，暴露出一个run方法来执行该fn，后续trigger触发时会执行这个fn
 class ReactiveEffect {
   private _fn: any;
-
-  constructor (fn: any, public scheduler?: () => void) {
+  public scheduler: Function | undefined
+  deps = []
+  active = true
+  onStop?: () => void
+  constructor (fn: any, scheduler?: Function) {
     this._fn = fn
+    this.scheduler = scheduler
   }
 
+  // 将当前class存到全局变量中，后续trigger触发后会调用class中的run方法
+  // 返回出去后可能会导致this指向问题，需要在effect中使用bind重新指向this调用
   run () {
     activeEffect = this
     return this._fn()
+  }
+
+  // 删除所依赖的某个函数，从而达到失去响应式的目的
+  stop () {
+    // 防止多次调用stop导致一直在遍历
+    if (this.active) {
+      this.deps.forEach((effect: any) => {
+        effect.delete(this)
+      });
+
+      // 执行onStop回调
+      if (this.onStop) {
+        this.onStop()
+      }
+      this.active = false
+    }
   }
 }
 
 // 将当前fn实例化并执行一次
 export function effect(fn: any, options: options = {}) {
   let _effect = new ReactiveEffect(fn, options.scheduler)
+
+  // 合并options
+  Object.assign(_effect, options)
+
   _effect.run()
-  const runner = _effect.run.bind(_effect)
+  // 这里如果直接返回run，当在外部调用时，run内部的this指向的就是window(window.runner())
+  // 这样run内部的this就获取不到_fn这个函数了，所以需要绑定为_effect
+  const runner: any = _effect.run.bind(_effect)
+  runner.effect = _effect
   return runner
 };
 
@@ -44,7 +73,14 @@ export function track(target: any, key: any) {
     dep = new Set()
     keyMap.set(key, dep)
   }
+
+  // 防止初始化时没有值，后续的push会报错
+  if (!activeEffect) return
+
   dep.add(activeEffect)
+
+  // 存储当前依赖函数，为stop函数作用，当调用stop则删除deps内的依赖函数
+  activeEffect.deps.push(dep)
 };
 
 /**
@@ -65,3 +101,7 @@ export function trigger(target: any, key: any) {
     }
   }
 };
+
+export function stop (runner: any) {
+  runner.effect.stop()
+}

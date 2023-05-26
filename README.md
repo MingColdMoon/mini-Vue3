@@ -11,3 +11,5 @@
 | fn | Function | 函数内的响应式对象会被触发
 | options | Object | 选项配置，如下表
 | scheduler | Function | 响应式触发后要执行的函数，返回当前fn
+| onStop | Function | 函数外调用stop方法传入一个effect后，执行该onStop回调
+
