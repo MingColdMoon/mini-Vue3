@@ -1,5 +1,5 @@
 import { effect, stop } from "../effect";
-import { reactive } from "../reactive";
+import { reactive, readonly } from "../reactive";
 
 describe('effect', () => {
   it('should sum', () => {
