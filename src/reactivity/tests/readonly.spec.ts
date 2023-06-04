@@ -3,10 +3,11 @@ import { reactive, readonly } from "../reactive";
 
 describe('readonly', () => {
   it('readonly', () => {
-    const original = { foo: 1 }
+    const original = { foo: 1, info: { name: 'xx' } }
     const obj = readonly(original)
     expect(obj).not.toBe(original);
     expect(obj.foo).toBe(1);
+    expect(isReadOnly(obj.info)).toBe(true);
   });
   it('throw waring', () => {
     console.warn = jest.fn()

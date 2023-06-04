@@ -18,18 +18,18 @@ class ReactiveEffect {
     return this._fn()
   }
 
-  // 删除所依赖的某个函数，从而达到失去响应式的目的
+  // 删除所依赖的函数，从而达到失去响应式的目的
   stop () {
     // 防止多次调用stop导致一直在遍历
     if (this.active) {
       this.deps.forEach((effect: any) => {
         effect.delete(this)
       });
-
       // 执行onStop回调
       if (this.onStop) {
         this.onStop()
       }
+      isStop = true
       this.active = false
     }
   }
@@ -52,6 +52,7 @@ export function effect(fn: any, options: options = {}) {
 
 // 定义一个当前作用域变量，后续当trigger触发时可以去作用域中拿到run方法
 let activeEffect: any;
+let isStop = false
 let targetMap = new Map()
 
 /**
@@ -62,6 +63,7 @@ let targetMap = new Map()
  * @param key 
  */
 export function track(target: any, key: any) {
+  if (!isTracking()) return
   // targetMap => key => fn
   let keyMap = targetMap.get(target)
   if (!keyMap) {
@@ -73,9 +75,6 @@ export function track(target: any, key: any) {
     dep = new Set()
     keyMap.set(key, dep)
   }
-
-  // 防止初始化时没有值，后续的push会报错
-  if (!activeEffect) return
 
   dep.add(activeEffect)
 
@@ -104,4 +103,10 @@ export function trigger(target: any, key: any) {
 
 export function stop (runner: any) {
   runner.effect.stop()
+}
+
+export function isTracking () {
+  // activeEffect 防止初始化时没有值，后续的push会报错
+  // isStop 防止stop后又触发了更新依赖的操作
+  return activeEffect && !isStop
 }
